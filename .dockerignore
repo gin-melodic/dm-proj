@@ -23,6 +23,7 @@ dm-server/.git
 dm-knowledge-service/.git
 dm-knowledge-service/logs
 dm-knowledge-service/**/__pycache__
+dm-knowledge-service/data/knowledge_bases/indices
 dm-server/temp
 dm-server/volume
 dist

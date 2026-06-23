@@ -4,7 +4,7 @@ from app.services.knowledge_engine import KnowledgeEngine
 
 
 engine = KnowledgeEngine()
-for message in engine.load_knowledge_bases():
+for message in engine.build_knowledge_bases():
     print(message, flush=True)
 
 stats = engine.embedding_service.get_stats()

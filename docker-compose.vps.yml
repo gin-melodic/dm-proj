@@ -25,6 +25,8 @@ services:
     image: dm-knowledge-service:vps
     restart: unless-stopped
     env_file: [.env]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       APP_PORT: 8000
       APP_ENV: ${APP_ENV:-production}
