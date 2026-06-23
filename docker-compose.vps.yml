@@ -1,0 +1,88 @@
+name: dm-proj
+
+services:
+  postgres:
+    image: postgres:18.4
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-dream_db}
+      POSTGRES_USER: ${POSTGRES_USER:-dream_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+      - ./initdb/00-create-tables.sql:/docker-entrypoint-initdb.d/00-create-tables.sql:ro
+      - ./initdb/10-migrate-knowledge-cache-schema.sql:/docker-entrypoint-initdb.d/10-migrate-knowledge-cache-schema.sql:ro
+      - ./initdb/20-migrate-symbol-cache.sql:/docker-entrypoint-initdb.d/20-migrate-symbol-cache.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  dm-knowledge-service:
+    image: dm-knowledge-service:vps
+    restart: unless-stopped
+    env_file: [.env]
+    environment:
+      APP_PORT: 8000
+      APP_ENV: ${APP_ENV:-production}
+      API_DEBUG: ${API_DEBUG:-false}
+      KNOWLEDGE_BASE_DIR: /app/data/knowledge_bases
+      KNOWLEDGE_CACHE_DB_PATH: /app/data/knowledge.db
+      SYMBOL_CACHE_DATABASE_URL: postgresql://${POSTGRES_USER:-dream_user}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}@postgres:5432/${POSTGRES_DB:-dream_db}
+      LOG_FILE: /app/logs/knowledge_service.log
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+      TZ: ${TZ:-Asia/Shanghai}
+    ports:
+      - "${RAG_PORT:-8000}:8000"
+    volumes:
+      - knowledge_data:/app/data
+      - knowledge_logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 90s
+      retries: 5
+
+  dm-server:
+    image: dm-server:vps
+    restart: unless-stopped
+    env_file: [.env]
+    environment:
+      PORT: 8080
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:-dream_db}
+      DB_USER: ${POSTGRES_USER:-dream_user}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+      KNOWLEDGE_HOST: dm-knowledge-service
+      KNOWLEDGE_PORT: 8000
+      TZ: ${TZ:-Asia/Shanghai}
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
+    volumes:
+      - server_logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      dm-knowledge-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/api.json"]
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 5
+
+volumes:
+  postgres_data:
+  knowledge_data:
+  knowledge_logs:
+  server_logs:

@@ -1,0 +1,9 @@
+[submodule "dm-server"]
+	path = dm-server
+	url = https://github.com/gin-melodic/dm-server.git
+[submodule "dm-knowledge-service"]
+	path = dm-knowledge-service
+	url = https://github.com/gin-melodic/dm-knowledge-service.git
+[submodule "dream-rn-expo"]
+	path = dream-rn-expo
+	url = https://github.com/gin-melodic/dream-rn-expo.git

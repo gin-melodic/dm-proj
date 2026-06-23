@@ -1,0 +1,116 @@
+server:
+  address: ":{PORT:-8080}"
+  logPath: "./logs/"
+  logStdout: true
+  openapiPath: "/api.json"
+  swaggerPath: "/swagger"
+  serverAgent: "Dream Master HTTP Server"
+  errorStack: true
+  errorLogEnabled: true
+  errorLogPattern: "error.{Ymd}.log"
+  accessLogEnabled: true
+  accessLogPattern: "access.{Ymd}.log"
+
+logger:
+  level: "info"
+  path: "./logs/"
+  file: "DM_{Y-m-d}.log"
+  timeFormat: "2006-01-02T15:04:05.000"
+  rotateExpire: 14
+  stdout: true
+  ctxKeys: ["userId", "openId"]
+
+wechat:
+  appid: "{WECHAT_APP_ID}"
+  secret: "{WECHAT_APP_SECRET}"
+
+jwt:
+  secret: "{JWT_SECRET}"
+  timeout: "{JWT_TIMEOUT:-7200}"
+
+supabase:
+  project_url: "{SUPABASE_PROJECT_URL}"
+  publishable_key: "{SUPABASE_PUBLISHABLE_KEY}"
+  secret_key: "{SUPABASE_SECRET_KEY}"
+
+database:
+  debug: false
+  logger:
+    path: "./logs/sql"
+    level: "info"
+    stdout: true
+  default:
+    link: "pgsql:{DB_USER}:{DB_PASSWORD}@tcp({DB_HOST}:{DB_PORT})/{DB_NAME}"
+
+knowledge:
+  base_url: "http://{KNOWLEDGE_HOST:-dm-knowledge-service}:{KNOWLEDGE_PORT:-8000}"
+  timeout: 300
+
+concurrency:
+  max_running: 10
+  acquire_timeout_sec: 1
+  user:
+    max_analysis_count: 10
+    analysis_time_window_hours: 1
+
+prompts:
+  dream_analysis: |
+    你是一个梦境分析师，能够帮助用户解析他们的梦境。请根据用户提供的梦境内容，给出深入的分析和解释。
+    需要考虑梦境中的各种元素、情绪和象征意义，并结合心理学知识给出合理的解读。
+    回答应该包括：梦境整体寓意、关键元素分析、可能反映的内心状态、建议和启示。
+    若系统提供标准意象，请优先覆盖这些意象，不要遗漏或替换为含混上位词。
+
+ai_service: "{AI_SERVICE:-openrouter}"
+
+ollama:
+  base_url: "{OLLAMA_BASE_URL:-http://host.docker.internal:11434}"
+  model: "{OLLAMA_MODEL:-qwq:32b}"
+  timeout: 300
+  response_header_timeout: 20
+  idle_timeout: 45
+
+qwen:
+  base_url: "{QWEN_BASE_URL:-https://dashscope.aliyuncs.com/compatible-mode/v1}"
+  model: "{QWEN_MODEL:-qwen3.6-flash}"
+  api_key: "{QWEN_API_KEY}"
+  timeout: 300
+  response_header_timeout: 20
+  idle_timeout: 45
+  max_tokens: 4096
+  enable_thinking: true
+  thinking_budget: 4096
+
+lmstudio:
+  base_url: "{LMSTUDIO_BASE_URL:-http://host.docker.internal:1234/v1}"
+  model: "{LMSTUDIO_MODEL:-qwen3.6-27b-ud}"
+  timeout: 300
+  response_header_timeout: 20
+  idle_timeout: 45
+
+openrouter:
+  base_url: "{OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}"
+  model: "{OPENROUTER_MODEL:-qwen/qwen3-235b-a22b:free}"
+  api_key: "{OPENROUTER_API_KEY}"
+  timeout: 300
+  response_header_timeout: 20
+  idle_timeout: 45
+  max_tokens: 4096
+
+hunyuan:
+  base_url: "{HUNYUAN_BASE_URL:-https://tokenhub.tencentmaas.com/v1}"
+  model: "{HUNYUAN_MODEL:-deepseek-v4-flash}"
+  secret_key: "{HUNYUAN_SECRET_KEY}"
+  timeout: 300
+  response_header_timeout: 20
+  idle_timeout: 45
+  max_tokens: 4096
+
+groq:
+  base_url: "{GROQ_BASE_URL:-https://api.groq.com/openai/v1}"
+  api_key: "{GROQ_API_KEY}"
+  timeout: 300
+  response_header_timeout: 20
+  idle_timeout: 45
+  max_tokens: 4096
+  models:
+    - "llama-3.3-70b-versatile"

@@ -1,0 +1,114 @@
+name: dm-proj
+
+services:
+  postgres:
+    image: postgres:18.4
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-dream_db}
+      POSTGRES_USER: ${POSTGRES_USER:-dream_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+      - ./dm-server/resource/database/0-create-tables.sql:/docker-entrypoint-initdb.d/00-create-tables.sql:ro
+      - ./dm-knowledge-service/scripts/migrate_knowledge_cache_schema.sql:/docker-entrypoint-initdb.d/10-migrate-knowledge-cache-schema.sql:ro
+      - ./dm-knowledge-service/scripts/migrate_symbol_cache.sql:/docker-entrypoint-initdb.d/20-migrate-symbol-cache.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - dm-network
+
+  dm-knowledge-service:
+    image: ${RAG_IMAGE:-dm-knowledge-service:local}
+    build:
+      context: .
+      dockerfile: docker/dm-knowledge-service.Dockerfile
+      args:
+        USE_CHINA_MIRRORS: ${USE_CHINA_MIRRORS:-true}
+        TUNA_PYPI_MIRROR: ${TUNA_PYPI_MIRROR:-https://mirrors.aliyun.com/pypi/simple/}
+        HF_MIRROR_ENDPOINT: ${HF_MIRROR_ENDPOINT:-https://hf-mirror.com}
+        EMBEDDING_MODEL: ${EMBEDDING_MODEL:-richinfoai/ritrieve_zh_v1}
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      APP_PORT: 8000
+      APP_ENV: ${APP_ENV:-production}
+      API_DEBUG: ${API_DEBUG:-false}
+      PYTHONPATH: /app
+      PYTHONUNBUFFERED: 1
+      PYTHONDONTWRITEBYTECODE: 1
+      TZ: ${TZ:-Asia/Shanghai}
+      USE_CHINA_MIRRORS: ${USE_CHINA_MIRRORS:-true}
+      HF_MIRROR_ENDPOINT: ${HF_MIRROR_ENDPOINT:-https://hf-mirror.com}
+      HF_ENDPOINT: ${HF_MIRROR_ENDPOINT:-https://hf-mirror.com}
+      SYMBOL_CACHE_DATABASE_URL: postgresql://${POSTGRES_USER:-dream_user}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}@postgres:5432/${POSTGRES_DB:-dream_db}
+      LOG_LEVEL: ${RAG_LOG_LEVEL:-INFO}
+      LOG_FILE: /app/logs/knowledge_service.log
+    ports:
+      - "${RAG_PORT:-8000}:8000"
+    volumes:
+      - knowledge_data:/app/data
+      - knowledge_logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 90s
+      retries: 5
+    networks:
+      - dm-network
+
+  dm-server:
+    image: ${SERVER_IMAGE:-dm-server:local}
+    build:
+      context: .
+      dockerfile: docker/dm-server.Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      PORT: 8080
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:-dream_db}
+      DB_USER: ${POSTGRES_USER:-dream_user}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+      KNOWLEDGE_HOST: dm-knowledge-service
+      KNOWLEDGE_PORT: 8000
+      TZ: ${TZ:-Asia/Shanghai}
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
+    volumes:
+      - server_logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      dm-knowledge-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/api.json"]
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 5
+    networks:
+      - dm-network
+
+networks:
+  dm-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  knowledge_data:
+  knowledge_logs:
+  server_logs:

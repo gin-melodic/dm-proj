@@ -1,0 +1,30 @@
+.DS_Store
+**/.DS_Store
+
+# Local environment and credentials
+.env
+.env.*
+!.env.example
+*.p8
+*.pem
+*.key
+
+# Runtime data and logs
+volume/
+volumes/
+logs/
+*.log
+*.pid
+
+# Build and dependency caches
+node_modules/
+.expo/
+dist/
+build/
+coverage/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.cache/
+tmp/
+temp/
